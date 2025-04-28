@@ -1,56 +1,85 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <unistd.h>
+#include <cstdlib>
 #include <cstring>
+#include <ctime>
 
+// Функция отрисовки сцены
 void DrawScene(Display* display, Window window, GC gc) {
-    // Небо
-    XSetForeground(display, gc, 0x87CEEB); // RGB(135,206,235)
-    XFillRectangle(display, window, gc, 0, 0, 800, 300);
+    // Получение размеров окна
+    XWindowAttributes attrs;
+    XGetWindowAttributes(display, window, &attrs);
+    int width = attrs.width;
+    int height = attrs.height;
 
-    // Трава
-    XSetForeground(display, gc, 0x228B22); // RGB(34,139,34)
-    XFillRectangle(display, window, gc, 0, 300, 800, 300);
+    // 1. Космос (чёрный фон)
+    XSetForeground(display, gc, BlackPixel(display, DefaultScreen(display)));
+    XFillRectangle(display, window, gc, 0, 0, width, height);
 
-    // Дом
-    XSetForeground(display, gc, 0x8B4513); // RGB(139,69,19)
-    XFillRectangle(display, window, gc, 300, 300, 200, 150);
+    // 2. Звёзды (белые точки)
+    XSetForeground(display, gc, 0xFFFFFF); // Белый цвет
+    for (int i = 0; i < 100; i++) {
+        int x = rand() % width;
+        int y = rand() % height;
+        XDrawPoint(display, window, gc, x, y);
+    }
 
-    // Крыша (треугольник)
-    XPoint roof[3] = { {280, 300}, {520, 300}, {400, 220} };
-    XSetForeground(display, gc, 0x696969); // RGB(105,105,105)
-    XFillPolygon(display, window, gc, roof, 3, Convex, CoordModeOrigin);
+    // 3. Ракета
 
-    // Окно
-    XSetForeground(display, gc, 0xADD8E6); // RGB(173,216,230)
-    XFillRectangle(display, window, gc, 330, 330, 40, 40);
+    // Корпус ракеты (серебристый прямоугольник)
+    int rx = width/2 - 40;
+    int ry = height/2;
+    int rw = 80;
+    int rh = 200;
+    XSetForeground(display, gc, 0xC0C0C0); // Серебристый
+    XFillRectangle(display, window, gc, rx, ry, rw, rh);
 
-    // Дверь
-    XSetForeground(display, gc, 0x000000); // Black
-    XFillRectangle(display, window, gc, 420, 360, 40, 90);
+    // Носовой конус ракеты (красный треугольник)
+    XPoint nose[3] = {
+        {rx, ry},
+        {rx + rw, ry},
+        {rx + rw/2, ry - 80}
+    };
+    XSetForeground(display, gc, 0xFF0000); // Красный
+    XFillPolygon(display, window, gc, nose, 3, Convex, CoordModeOrigin);
 
-    // Солнце
-    XSetForeground(display, gc, 0xFFFF00); // Yellow
-    XFillArc(display, window, gc, 80, 50, 70, 70, 0, 360*64);
+    // Левый плавник
+    XPoint finL[3] = {
+        {rx, ry + rh/2},
+        {rx - 30, ry + rh + 20},
+        {rx, ry + rh}
+    };
+    // Правый плавник
+    XPoint finR[3] = {
+        {rx + rw, ry + rh/2},
+        {rx + rw + 30, ry + rh + 20},
+        {rx + rw, ry + rh}
+    };
+    XSetForeground(display, gc, 0xFF4500); // Оранжево-красный
+    XFillPolygon(display, window, gc, finL, 3, Convex, CoordModeOrigin);
+    XFillPolygon(display, window, gc, finR, 3, Convex, CoordModeOrigin);
 
-    // Дерево (ствол)
-    XSetForeground(display, gc, 0x654321); // RGB(101,67,33)
-    XFillRectangle(display, window, gc, 600, 360, 20, 90);
+    // Окна ракеты (три голубых круга)
+    XSetForeground(display, gc, 0x87CEEB); // Светло-голубой
+    for (int i = 0; i < 3; i++) {
+        int cx = rx + rw/2;
+        int cy = ry + 40 + i*50;
+        XFillArc(display, window, gc, cx-15, cy-15, 30, 30, 0, 360*64);
+    }
 
-    // Дерево (крона)
-    XSetForeground(display, gc, 0x008000); // RGB(0,128,0)
-    XFillArc(display, window, gc, 570, 290, 80, 80, 0, 360*64);
-
-    // Подпись
-    XSetForeground(display, gc, 0x000000); // Black
+    // 4. Подпись
+    XSetForeground(display, gc, 0xFFFFFF); // Белый
     XFontStruct* font = XLoadQueryFont(display, "fixed");
     if (font) {
         XSetFont(display, gc, font->fid);
     }
-    XDrawString(display, window, gc, 10, 20, "Домик в саду", strlen("Домик в саду"));
+    XDrawString(display, window, gc, 10, 30, "Ракета в космосе", strlen("Ракета в космосе"));
 }
 
 int main() {
+    srand(time(nullptr)); // Инициализация генератора случайных чисел
+
     Display* display = XOpenDisplay(nullptr);
     if (!display) {
         return 1;
@@ -62,7 +91,7 @@ int main() {
     Window window = XCreateSimpleWindow(display, root, 100, 100, 800, 600, 1,
                                         BlackPixel(display, screen), WhitePixel(display, screen));
 
-    XStoreName(display, window, "Домик в саду");
+    XStoreName(display, window, "Ракета в космосе");
 
     XSelectInput(display, window, ExposureMask | KeyPressMask | StructureNotifyMask);
     XMapWindow(display, window);
